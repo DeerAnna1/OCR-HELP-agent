@@ -61,7 +61,7 @@ jobs:
         path: .buildozer
         key: buildozer-${{ runner.os }}-${{ hashFiles('buildozer.spec') }}
 
-    - name: Download Android SDK tools
+    - name: Download Android SDK tools and accept licenses
       run: |
         BUILDOZER_SDK=".buildozer/android/platform/android-sdk"
         # Only download if not already cached
@@ -69,23 +69,27 @@ jobs:
           mkdir -p "$BUILDOZER_SDK"
           curl -fsSL -o /tmp/cmdline-tools.zip \
             "https://dl.google.com/android/repository/commandlinetools-linux-6514223_latest.zip"
+          # Extract to a temp dir first to see the structure
+          mkdir -p /tmp/cmdline-tools-tmp
           unzip -q /tmp/cmdline-tools.zip -d /tmp/cmdline-tools-tmp
-          # buildozer expects SDK tools at: $SDK/tools/bin/sdkmanager
-          mkdir -p "$BUILDOZER_SDK/tools"
-          cp -r /tmp/cmdline-tools-tmp/cmdline-tools/* "$BUILDOZER_SDK/tools/"
+          # Find where sdkmanager actually is and copy to tools/
+          SDKMGR=$(find /tmp/cmdline-tools-tmp -name sdkmanager -type f | head -1)
+          if [ -n "$SDKMGR" ]; then
+            TOOLS_DIR=$(dirname "$(dirname "$SDKMGR")")
+            mkdir -p "$BUILDOZER_SDK/tools"
+            cp -r "$TOOLS_DIR"/* "$BUILDOZER_SDK/tools/"
+          fi
           rm -rf /tmp/cmdline-tools.zip /tmp/cmdline-tools-tmp
         fi
-
-    - name: Accept Android SDK licenses
-      run: |
-        BUILDOZER_SDK=".buildozer/android/platform/android-sdk"
         # Write license hash files
         mkdir -p "$BUILDOZER_SDK/licenses"
         echo -e "\n24333f8a63b6825ea9c5514f83c2829b004d1fee" >> "$BUILDOZER_SDK/licenses/android-sdk-license"
         echo -e "\n84831b9409646a918e30573bab4c9c91346d8abd" >> "$BUILDOZER_SDK/licenses/android-sdk-preview-license"
         echo -e "\nd56f5187479451eabf01fb78af6dfcb131a6481e" >> "$BUILDOZER_SDK/licenses/android-sdk-arm-dbt-license"
-        # Accept interactively via sdkmanager
-        yes | "$BUILDOZER_SDK/tools/bin/sdkmanager" --sdk_root="$BUILDOZER_SDK" --licenses 2>/dev/null || true
+        # Accept interactively via sdkmanager if available
+        if [ -f "$BUILDOZER_SDK/tools/bin/sdkmanager" ]; then
+          yes | "$BUILDOZER_SDK/tools/bin/sdkmanager" --sdk_root="$BUILDOZER_SDK" --licenses 2>/dev/null || true
+        fi
 
     - name: Build APK
       run: |
