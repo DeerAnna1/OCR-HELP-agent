@@ -1,0 +1,13 @@
+venv/
+__pycache__/
+*.pyc
+.idea/
+.pytest_cache/
+.buildozer/
+bin/
+*.egg-info/
+dist/
+build/
+.DS_Store
+*.so
+models/hand_landmarker.task
