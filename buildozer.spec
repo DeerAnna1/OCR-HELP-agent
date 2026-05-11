@@ -34,6 +34,7 @@ fullscreen = 0
 
 # Android 配置
 android.permissions = CAMERA,RECORD_AUDIO,VIBRATE,INTERNET
+android.accept_sdk_license = True
 android.api = 33
 android.minapi = 21
 android.ndk = 25b
