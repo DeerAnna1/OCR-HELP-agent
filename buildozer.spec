@@ -1,3 +1,7 @@
+[buildozer]
+warn_on_root = 0
+log_level = 2
+
 [app]
 
 # App 配置
@@ -10,9 +14,8 @@ source.dir = .
 source.include_exts = py,png,jpg,kv,atlas,json,tflite,txt,task
 source.exclude_dirs = tests,venv,.git,__pycache__,build,bin,.buildozer,models
 
-# 入口点 (buildozer 默认找 main.py，main.py 中检测 Android 后自动跳转 main_mobile.py)
+# 入口点
 android.entrypoint = org.kivy.android.PythonActivity
-android.bootstrap = sdl2
 
 # 版本
 version = 1.0.0
@@ -45,9 +48,6 @@ requirements = python3,
     pyjnius,
     android,
     cython
-
-# 日志级别
-log_level = 2
 
 # P4A 配置
 p4a.branch = master
