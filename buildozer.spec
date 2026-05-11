@@ -44,7 +44,6 @@ android.archs = arm64-v8a
 requirements = python3,
     kivy,
     pillow,
-    numpy,
     plyer,
     pyjnius,
     android,

@@ -1,6 +1,9 @@
 import logging
 
-import numpy as np
+try:
+    import numpy as np
+except ImportError:
+    np = None
 
 from perception.object_detection import DetectionResult
 from perception.hand_tracking import HandInfo, HandTrackingModule

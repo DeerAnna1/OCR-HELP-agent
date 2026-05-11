@@ -5,7 +5,10 @@ Android 上使用启发式方法
 import logging
 from dataclasses import dataclass
 
-import numpy as np
+try:
+    import numpy as np
+except ImportError:
+    np = None
 
 try:
     import cv2
@@ -78,10 +81,18 @@ class DepthEstimationModule:
                 x1, y1, x2, y2 = bbox
                 region = depth_map[y1:y2, x1:x2]
                 if region.size > 0:
-                    median_depth = float(np.median(region))
+                    if np is not None:
+                        median_depth = float(np.median(region))
+                    else:
+                        vals = sorted([float(x) for row in region for x in row])
+                        median_depth = vals[len(vals) // 2] if vals else 0.0
                     return self._depth_to_info(median_depth, depth_map)
 
-            center_depth = float(np.median(depth_map))
+            if np is not None:
+                center_depth = float(np.median(depth_map))
+            else:
+                vals = sorted([float(x) for row in depth_map for x in row])
+                center_depth = vals[len(vals) // 2] if vals else 0.0
             return self._depth_to_info(center_depth, depth_map)
         except Exception as e:
             logger.error(f"MiDaS depth estimation error: {e}")
@@ -118,8 +129,13 @@ class DepthEstimationModule:
         return max(10, min(300, base_cm))
 
     def _depth_to_info(self, median_depth, depth_map):
-        depth_min = float(np.min(depth_map))
-        depth_max = float(np.max(depth_map))
+        if np is not None:
+            depth_min = float(np.min(depth_map))
+            depth_max = float(np.max(depth_map))
+        else:
+            flat = [float(x) for row in depth_map for x in row] if hasattr(depth_map, '__iter__') else [float(depth_map)]
+            depth_min = min(flat)
+            depth_max = max(flat)
         depth_range = depth_max - depth_min if depth_max > depth_min else 1
         normalized = (median_depth - depth_min) / depth_range
 

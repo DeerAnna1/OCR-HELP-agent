@@ -2,7 +2,10 @@ import time
 import logging
 from dataclasses import dataclass, field
 
-import numpy as np
+try:
+    import numpy as np
+except ImportError:
+    np = None
 
 import sys
 import os
@@ -90,11 +93,25 @@ class AgentStateMachine:
         h, w = frame.shape[:2]
 
         # 计算帧差异用于运动检测
-        gray = np.mean(frame, axis=2).astype(np.float32)
-        if self._prev_frame_gray is not None:
-            diff = np.mean(np.abs(gray - self._prev_frame_gray)) / 255.0
-            self.auto_mode.update_motion(diff)
-        self._prev_frame_gray = gray.copy()
+        if np is not None:
+            gray = np.mean(frame, axis=2).astype(np.float32)
+            if self._prev_frame_gray is not None:
+                diff = np.mean(np.abs(gray - self._prev_frame_gray)) / 255.0
+                self.auto_mode.update_motion(diff)
+            self._prev_frame_gray = gray.copy()
+        else:
+            # 纯 Python 备选：取样计算帧差异
+            h, w = frame.shape[:2]
+            sample_pixels = []
+            for y in range(0, h, max(1, h // 20)):
+                for x in range(0, w, max(1, w // 20)):
+                    px = frame[y, x]
+                    sample_pixels.append(float(px[0] + px[1] + px[2]) / 3.0)
+            cur_avg = sum(sample_pixels) / max(len(sample_pixels), 1)
+            if self._prev_frame_gray is not None:
+                diff = abs(cur_avg - self._prev_frame_gray) / 255.0
+                self.auto_mode.update_motion(diff)
+            self._prev_frame_gray = cur_avg
 
         detection_result = self.detector.detect(frame, target_class=None)
         hand_info = self.hand_tracker.detect(frame)

@@ -20,7 +20,10 @@ from kivy.core.window import Window
 from kivy.utils import platform
 from kivy.graphics.texture import Texture
 
-import numpy as np
+try:
+    import numpy as np
+except ImportError:
+    np = None
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("GuideVisionMobile")

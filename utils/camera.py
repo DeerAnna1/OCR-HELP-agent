@@ -1,7 +1,10 @@
 import logging
 
 import cv2
-import numpy as np
+try:
+    import numpy as np
+except ImportError:
+    np = None
 
 import sys
 import os

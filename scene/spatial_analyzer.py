@@ -1,7 +1,10 @@
 import logging
 from dataclasses import dataclass, field
 
-import numpy as np
+try:
+    import numpy as np
+except ImportError:
+    np = None
 
 import sys
 import os
@@ -145,7 +148,11 @@ class SpatialAnalyzer:
             y2 = min(h, cy + region_size)
             region = depth_map[y1:y2, x1:x2]
             if region.size > 0:
-                return float(np.median(region))
+                if np is not None:
+                    return float(np.median(region))
+                else:
+                    vals = sorted([float(x) for row in region for x in row])
+                    return vals[len(vals) // 2] if vals else 0.0
 
         obj_height_ratio = obj.height / self.frame_height
         bottom_ratio = obj.y2 / self.frame_height

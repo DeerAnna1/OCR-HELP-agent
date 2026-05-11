@@ -6,7 +6,10 @@ import re
 import logging
 from dataclasses import dataclass, field
 
-import numpy as np
+try:
+    import numpy as np
+except ImportError:
+    np = None
 
 try:
     import cv2

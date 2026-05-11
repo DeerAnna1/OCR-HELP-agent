@@ -5,7 +5,10 @@ Android 上 mediapipe 不可用时降级
 import logging
 from dataclasses import dataclass
 
-import numpy as np
+try:
+    import numpy as np
+except ImportError:
+    np = None
 
 try:
     import cv2

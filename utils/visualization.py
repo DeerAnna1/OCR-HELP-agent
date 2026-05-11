@@ -1,5 +1,8 @@
 import cv2
-import numpy as np
+try:
+    import numpy as np
+except ImportError:
+    np = None
 from PIL import Image, ImageDraw, ImageFont
 
 from perception.object_detection import DetectionResult
@@ -59,7 +62,9 @@ def _put_text_cn(frame, text, pos, color=(255, 255, 255), size=20):
     draw = ImageDraw.Draw(pil_img)
     font = _get_font(size)
     draw.text(pos, text, font=font, fill=color)
-    return cv2.cvtColor(np.array(pil_img), cv2.COLOR_RGB2BGR)
+    if np is not None:
+        return cv2.cvtColor(np.array(pil_img), cv2.COLOR_RGB2BGR)
+    return frame
 
 
 def _get_risk_key(obj) -> str:

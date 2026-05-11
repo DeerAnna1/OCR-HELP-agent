@@ -5,7 +5,10 @@ Android 上 YOLO 不可用时使用轻量检测
 import logging
 from dataclasses import dataclass, field
 
-import numpy as np
+try:
+    import numpy as np
+except ImportError:
+    np = None
 
 try:
     import cv2
@@ -209,7 +212,7 @@ class ObjectDetectionModule:
             edges = cv2.Canny(blurred, 50, 150)
 
             # 膨胀边缘以连接断裂区域
-            kernel = np.ones((3, 3), np.uint8)
+            kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
             dilated = cv2.dilate(edges, kernel, iterations=2)
 
             contours, _ = cv2.findContours(dilated, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
