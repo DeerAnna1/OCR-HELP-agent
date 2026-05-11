@@ -150,6 +150,8 @@ class GuideVisionMobileApp(App):
 
     def _speak(self, text):
         """语音播报"""
+        if not text:
+            return
         if self._plyer_tts:
             try:
                 self._plyer_tts.speak(text)
@@ -165,46 +167,69 @@ class GuideVisionMobileApp(App):
             logger.info(f"[Voice] {text}")
 
     def _init_speech_recognition(self):
-        """初始化语音识别（Android 使用 Google Speech API）"""
+        """初始化语音识别"""
+        self._stt = None
+        self._speech_recognizer = None
+        self._stt_poll_event = None
+
         if platform == "android":
             try:
                 from plyer import stt
                 self._stt = stt
-                logger.info("Using plyer STT")
-                # 开始持续监听
-                self._start_listening()
+                self._stt.language = "zh-CN"
+                logger.info("Using plyer STT (Android)")
             except Exception as e:
                 logger.warning(f"plyer STT not available: {e}")
-                self._stt = None
         else:
-            # 桌面端使用 SpeechRecognition
             try:
                 from utils.speech_recognition import SpeechRecognizer
                 self._speech_recognizer = SpeechRecognizer()
                 self._speech_recognizer.start_listening(self._on_voice_input)
-                logger.info("Using SpeechRecognition")
+                logger.info("Using SpeechRecognition (desktop)")
             except Exception as e:
                 logger.warning(f"SpeechRecognition not available: {e}")
 
     def _start_listening(self):
-        """Android: 开始语音监听"""
-        if hasattr(self, '_stt') and self._stt:
+        """开始语音监听"""
+        if self._stt:
+            # Android: 启动 STT 并轮询结果
             try:
-                self._stt.start(listening_callback=self._on_stt_result)
+                if not self._stt.listening:
+                    self._stt.start()
+                # 每 0.5 秒检查一次识别结果
+                if self._stt_poll_event:
+                    self._stt_poll_event.cancel()
+                self._stt_poll_event = Clock.schedule_interval(self._poll_stt_results, 0.5)
+                logger.info("STT listening started")
             except Exception as e:
                 logger.error(f"STT start error: {e}")
 
-    def _on_stt_result(self, words):
-        """Android STT 回调"""
-        if words and self.agent:
-            text = words[0] if isinstance(words, (list, tuple)) else str(words)
-            logger.info(f"Voice input: {text}")
-            self._on_voice_input(text)
+    def _poll_stt_results(self, dt):
+        """轮询 Android STT 识别结果"""
+        if not self._stt or not self._running:
+            return False
+        try:
+            results = self._stt.results
+            if results:
+                text = results[0] if isinstance(results, (list, tuple)) else str(results)
+                text = text.strip()
+                if text:
+                    logger.info(f"STT result: {text}")
+                    self._on_voice_input(text)
+                    # 清除结果，继续监听
+                    self._stt.results = []
+            # 如果停止了监听，重新启动
+            if not self._stt.listening:
+                self._stt.start()
+        except Exception as e:
+            logger.debug(f"STT poll error: {e}")
+        return True  # 继续轮询
 
     def _on_voice_input(self, text):
         """处理语音输入"""
         if not self.agent or not self._running:
             return
+        logger.info(f"Voice input: {text}")
         response = self.agent.handle_voice_command(text)
         if response:
             self._speak(response)
@@ -250,6 +275,7 @@ class GuideVisionMobileApp(App):
         self.agent.start()
         self._running = True
         self._frame_event = Clock.schedule_interval(self._process_frame, 1.0 / 10.0)
+        self._start_listening()
         self.layout.status_label.text = "AI 自动模式运行中"
         self.layout.info_label.text = "语音交互：直接说话即可\nAI 自动识别场景并切换模式"
         self._speak("系统已启动，AI 自动识别场景中")
@@ -260,6 +286,14 @@ class GuideVisionMobileApp(App):
         if self._frame_event:
             self._frame_event.cancel()
             self._frame_event = None
+        if self._stt_poll_event:
+            self._stt_poll_event.cancel()
+            self._stt_poll_event = None
+        if self._stt:
+            try:
+                self._stt.stop()
+            except Exception:
+                pass
         if self._camera_capture:
             self._camera_capture.release()
             self._camera_capture = None
